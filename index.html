@@ -73,6 +73,21 @@
     margin-top: 40px; flex-wrap: wrap;
   }
   .cat-strip img { height: 64px; image-rendering: pixelated; opacity: 0.92; }
+  .playground-card {
+    background: var(--card); border: 1px solid #1e2430; border-radius: 16px;
+    padding: 24px; margin-top: 8px;
+  }
+  .runner-stage { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; }
+  .speed-wrap { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: .9rem; }
+  .speed-wrap input[type=range] { width: 160px; accent-color: var(--accent); }
+  .species-rows { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .species-rows button {
+    background: #0d1016; color: var(--text); border: 1px solid #232936;
+    border-radius: 10px; padding: 6px 10px; cursor: pointer;
+  }
+  .species-rows button img { height: 26px; image-rendering: pixelated; display: block; }
+  .species-rows button.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .species-name { color: var(--accent); font-weight: 700; margin-top: 10px; min-height: 1.2em; }
   footer {
     border-top: 1px solid #1a1f29; padding: 34px 20px; text-align: center;
     color: var(--muted); font-size: 0.85rem;
@@ -99,6 +114,23 @@
     <span class="badge">Zero dependencies</span>
     <span class="badge">Offline 100%</span>
     <span class="badge">44 tests</span>
+  </div>
+</section>
+
+<section class="section" id="playground">
+  <h2>ลองตัววิ่งสด ๆ — เหมือนในแอป</h2>
+  <p class="lead">เลือกตัว แล้วลาก speed ดูจังหวะก้าวของแต่ละสายพันธุ์ (เฟรมจริงจากในแอป)</p>
+  <div class="playground-card">
+    <div class="runner-stage">
+      <img id="runner-img" src="assets/cat_0.png" alt="runner" style="height:72px;image-rendering:pixelated;">
+      <div class="speed-wrap">
+        <label for="speed">ความเร็ว</label>
+        <input type="range" id="speed" min="40" max="400" value="140">
+        <span id="speed-label">ปกติ</span>
+      </div>
+    </div>
+    <div class="species-rows" id="species-rows"></div>
+    <p id="species-name" class="species-name">แมว</p>
   </div>
 </section>
 
@@ -132,5 +164,76 @@
   <p style="margin-top:8px;">personal build · ไม่มีการเก็บข้อมูลใด ๆ</p>
 </footer>
 
+<script>
+(function () {
+  const SPECIES = [
+    { id: "cat",    name: "แมว",     frames: 5 },
+    { id: "dog",    name: "หมา",     frames: 12 },
+    { id: "rabbit", name: "กระต่าย", frames: 12 },
+    { id: "mouse",  name: "หนู",     frames: 12 },
+    { id: "horse",  name: "ม้า",     frames: 12 },
+    { id: "duck",   name: "เป็ด",    frames: 12 },
+    { id: "bird",   name: "นก",      frames: 12 },
+    { id: "frog",   name: "กบ",      frames: 12 },
+    { id: "turtle", name: "เต่า",    frames: 12 },
+  ];
+  const STEPS = 12;
+
+  const img = document.getElementById("runner-img");
+  const nameEl = document.getElementById("species-name");
+  const speed = document.getElementById("speed");
+  const speedLabel = document.getElementById("speed-label");
+  const rows = document.getElementById("species-rows");
+
+  // preload ทุกเฟรมกันกระตุก
+  SPECIES.forEach(s => {
+    for (let i = 0; i < STEPS; i++) {
+      const im = new Image();
+      im.src = `assets/${s.id}_${i}.png`;
+    }
+  });
+
+  let current = SPECIES[0];
+  let frame = 0;
+  let last = performance.now();
+  let interval = 140; // ms ต่อเฟรม (หนู slider: 400 → 60)
+
+  function tick(now) {
+    if (now - last >= interval) {
+      last = now;
+      frame = (frame + 1) % STEPS;
+      img.src = `assets/${current.id}_${frame}.png`;
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  speed.addEventListener("input", () => {
+    // slider 40..400 → interval 400..60 (ยิ่งเล็กยิ่งเร็ว)
+    const v = Number(speed.value);
+    interval = 460 - v;
+    speedLabel.textContent = interval <= 120 ? "เร็ว" : (interval >= 320 ? "ช้า" : "ปกติ");
+  });
+
+  SPECIES.forEach(s => {
+    const button = document.createElement("button");
+    const im = document.createElement("img");
+    im.src = `assets/${s.id}_0.png`;
+    im.alt = s.name;
+    button.appendChild(im);
+    button.title = s.name;
+    button.setAttribute("aria-label", "ตัววิ่ง " + s.name);
+    button.addEventListener("click", () => {
+      current = s;
+      nameEl.textContent = s.name;
+      document.querySelectorAll(".species-rows button").forEach(b => b.classList.remove("active"));
+      button.classList.add("active");
+      img.src = `assets/${s.id}_0.png`;
+    });
+    rows.appendChild(button);
+  });
+  rows.querySelector("button").classList.add("active");
+})();
+</script>
 </body>
 </html>
